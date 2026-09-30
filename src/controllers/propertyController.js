@@ -1,8 +1,15 @@
+const mongoose = require('mongoose');
 const Property = require('../models/Property');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { initialProperties } = require('../seed/mockSource');
 
 let inMemoryProperties = [...initialProperties];
+
+const getQueryId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ customId: id }, { _id: id }] }
+    : { customId: id };
+};
 
 // @desc    Get all properties with filters
 // @route   GET /api/properties
@@ -55,7 +62,7 @@ const getPropertyById = async (req, res) => {
     const { id } = req.params;
     let prop;
     try {
-      prop = await Property.findOne({ customId: id });
+      prop = await Property.findOne(getQueryId(id));
     } catch (e) {
       prop = inMemoryProperties.find(p => p.id === id || p.customId === id);
     }
@@ -90,13 +97,14 @@ const createProperty = async (req, res) => {
       postedAt: new Date().toISOString().split('T')[0],
     };
 
+    let created = newProp;
     try {
-      await Property.create(newProp);
+      created = await Property.create(newProp);
     } catch (e) {
       inMemoryProperties.unshift(newProp);
     }
 
-    return successResponse(res, 201, 'Property listing created successfully', newProp);
+    return successResponse(res, 201, 'Property listing created successfully', created);
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
@@ -115,7 +123,7 @@ const updatePropertyStatus = async (req, res) => {
     }
 
     try {
-      await Property.findOneAndUpdate({ customId: id }, { status });
+      await Property.findOneAndUpdate(getQueryId(id), { status }, { new: true });
     } catch (e) {
       // In-memory fallback
       const found = inMemoryProperties.find(p => p.id === id || p.customId === id);
@@ -137,7 +145,7 @@ const togglePropertyFeatured = async (req, res) => {
     let nextState = true;
 
     try {
-      const prop = await Property.findOne({ customId: id });
+      const prop = await Property.findOne(getQueryId(id));
       if (prop) {
         nextState = !prop.isFeatured;
         prop.isFeatured = nextState;
@@ -164,7 +172,7 @@ const deleteProperty = async (req, res) => {
   try {
     const { id } = req.params;
     try {
-      await Property.findOneAndDelete({ customId: id });
+      await Property.findOneAndDelete(getQueryId(id));
     } catch (e) {
       inMemoryProperties = inMemoryProperties.filter(p => p.id !== id && p.customId !== id);
     }

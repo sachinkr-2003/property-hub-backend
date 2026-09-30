@@ -1,8 +1,15 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { initialUsers } = require('../seed/mockSource');
 
 let inMemoryUsers = [...initialUsers];
+
+const getQueryId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ customId: id }, { _id: id }] }
+    : { customId: id };
+};
 
 // @desc    Get all users (tenants, roommates)
 // @route   GET /api/users
@@ -46,7 +53,7 @@ const toggleBlockUser = async (req, res) => {
     let nextStatus = 'Suspended';
 
     try {
-      const user = await User.findOne({ customId: id });
+      const user = await User.findOne(getQueryId(id));
       if (user) {
         nextStatus = user.status === 'Active' ? 'Suspended' : 'Active';
         user.status = nextStatus;

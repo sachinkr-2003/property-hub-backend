@@ -1,8 +1,15 @@
+const mongoose = require('mongoose');
 const Owner = require('../models/Owner');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { initialOwners } = require('../seed/mockSource');
 
 let inMemoryOwners = [...initialOwners];
+
+const getQueryId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id)
+    ? { $or: [{ customId: id }, { _id: id }] }
+    : { customId: id };
+};
 
 // @desc    Get all owners / landlords
 // @route   GET /api/kyc/owners
@@ -47,8 +54,9 @@ const approveKyc = async (req, res) => {
 
     try {
       await Owner.findOneAndUpdate(
-        { customId: id },
-        { kycStatus: 'Verified', verificationStatus: 'Approved', remarks: remarks || 'Verified' }
+        getQueryId(id),
+        { kycStatus: 'Verified', verificationStatus: 'Approved', remarks: remarks || 'Verified' },
+        { new: true }
       );
     } catch (e) {
       const found = inMemoryOwners.find(o => o.id === id || o.customId === id);
@@ -75,8 +83,9 @@ const rejectKyc = async (req, res) => {
 
     try {
       await Owner.findOneAndUpdate(
-        { customId: id },
-        { kycStatus: 'Rejected', verificationStatus: 'Rejected', remarks: remarks || 'Rejected' }
+        getQueryId(id),
+        { kycStatus: 'Rejected', verificationStatus: 'Rejected', remarks: remarks || 'Rejected' },
+        { new: true }
       );
     } catch (e) {
       const found = inMemoryOwners.find(o => o.id === id || o.customId === id);
@@ -102,7 +111,7 @@ const toggleBlockOwner = async (req, res) => {
     let nextStatus = 'Blocked';
 
     try {
-      const owner = await Owner.findOne({ customId: id });
+      const owner = await Owner.findOne(getQueryId(id));
       if (owner) {
         nextStatus = owner.status === 'Active' ? 'Blocked' : 'Active';
         owner.status = nextStatus;
