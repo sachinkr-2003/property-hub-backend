@@ -685,12 +685,79 @@ const verifyEmailOtp = async (req, res) => {
 
 const phoneLogin = verifyOtp;
 
+// ────────────────────────────────────────────────────────────────────────────
+// @desc    Admin updates their own email and/or password
+// @route   PATCH /api/auth/admin-update-credentials
+// @access  Private (Admin JWT required)
+// ────────────────────────────────────────────────────────────────────────────
+const updateAdminCredentials = async (req, res) => {
+  try {
+    const { currentPassword, newEmail, newPassword } = req.body;
+
+    if (!currentPassword) {
+      return errorResponse(res, 400, 'Current password is required to verify identity');
+    }
+    if (!newEmail && !newPassword) {
+      return errorResponse(res, 400, 'Provide at least a new email or a new password to update');
+    }
+
+    // Find admin from token identity (req.user set by authMiddleware)
+    const adminUser = await User.findOne({ role: 'Super Admin' });
+    if (!adminUser) {
+      return errorResponse(res, 404, 'Admin account not found');
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, adminUser.password);
+    if (!isMatch) {
+      return errorResponse(res, 401, 'Current password is incorrect');
+    }
+
+    // Apply updates
+    if (newEmail) {
+      const emailExists = await User.findOne({ email: newEmail, _id: { $ne: adminUser._id } });
+      if (emailExists) return errorResponse(res, 400, 'This email is already in use');
+      adminUser.email = newEmail;
+    }
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        return errorResponse(res, 400, 'New password must be at least 6 characters');
+      }
+      adminUser.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await adminUser.save();
+
+    // Issue a fresh token with updated info
+    const token = generateToken({
+      id: adminUser.customId || adminUser._id?.toString(),
+      name: adminUser.name,
+      email: adminUser.email,
+      role: adminUser.role,
+    });
+
+    return successResponse(res, 200, 'Admin credentials updated successfully', {
+      token,
+      admin: {
+        id: adminUser.customId || adminUser._id?.toString(),
+        name: adminUser.name,
+        email: adminUser.email,
+        role: adminUser.role,
+        profileImage: adminUser.profileImage || '',
+      },
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
 module.exports = {
   sendOtp,
   verifyOtp,
   getMe,
   updateProfile,
   adminLogin,
+  updateAdminCredentials,
   googleLogin,
   emailRegister,
   emailLogin,

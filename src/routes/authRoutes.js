@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { sendOtp, verifyOtp, getMe, updateProfile, adminLogin, phoneLogin, googleLogin, emailLogin, emailRegister, sendEmailOtp, verifyEmailOtp } = require('../controllers/authController');
+const { sendOtp, verifyOtp, getMe, updateProfile, adminLogin, updateAdminCredentials, phoneLogin, googleLogin, emailLogin, emailRegister, sendEmailOtp, verifyEmailOtp } = require('../controllers/authController');
 
 // JWT middleware (light-touch inline for GET /me and PATCH /profile)
 const jwt = require('jsonwebtoken');
@@ -28,7 +28,8 @@ router.post('/send-email-otp', sendEmailOtp); // Send Email OTP
 router.post('/verify-email-otp', verifyEmailOtp); // Verify Email OTP
 
 // ─── Protected Routes ─────────────────────────────────────────────────────────
-router.get('/me',           authMiddleware, getMe);           // Get current user
-router.patch('/profile',    authMiddleware, updateProfile);   // Update profile
+router.get('/me',                        authMiddleware, getMe);                      // Get current user
+router.patch('/profile',                 authMiddleware, updateProfile);              // Update profile
+router.patch('/admin-update-credentials', authMiddleware, updateAdminCredentials);    // Admin change own email/password
 
 module.exports = router;
