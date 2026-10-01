@@ -51,7 +51,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Welcome root route
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to Property Hub Backend API Server',
+    message: 'Welcome to Search Backend API Server',
     documentation: '/api/health',
     status: 'Running',
   });

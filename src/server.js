@@ -14,7 +14,7 @@ connectDB();
 // Start HTTP Server
 const server = app.listen(PORT, () => {
   console.log('====================================================');
-  console.log(`🚀 [Property Hub Backend Server Started]`);
+  console.log(`🚀 [Search Backend Server Started]`);
   console.log(`📡 Port: http://localhost:${PORT}`);
   console.log(`🩺 Health API: http://localhost:${PORT}/api/health`);
   console.log(`🌐 Mode: ${process.env.NODE_ENV || 'development'}`);

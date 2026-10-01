@@ -68,7 +68,7 @@ const defaultNotifications = [
     userId: 'all',
     targetAudience: 'All Users',
     type: 'broadcast',
-    title: '⚡ Welcome to Property Hub Live Network!',
+    title: '⚡ Welcome to Search Live Network!',
     message: 'Browse 100% verified flats, PG rooms & direct owner properties across Lucknow with zero brokerage.',
     deepLink: 'app://home',
     isRead: false,

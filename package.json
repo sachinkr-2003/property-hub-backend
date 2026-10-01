@@ -1,7 +1,7 @@
 {
   "name": "property-hub-backend",
   "version": "1.0.0",
-  "description": "Property Hub & BachelorHub RESTful API Backend Server",
+  "description": "Search & BachelorHub RESTful API Backend Server",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
@@ -18,7 +18,7 @@
     "mongodb",
     "rest-api"
   ],
-  "author": "Property Hub Engineering",
+  "author": "Search Engineering",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",

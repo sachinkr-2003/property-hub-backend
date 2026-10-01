@@ -18,7 +18,7 @@ const reportsRoutes = require('./reportsRoutes');
 router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ONLINE',
-    service: 'Property Hub & BachelorHub RESTful API Gateway',
+    service: 'Search & BachelorHub RESTful API Gateway',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     endpoints: {

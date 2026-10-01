@@ -1,4 +1,4 @@
-// Comprehensive Seed Dataset for Property Hub & BachelorHub Ecosystem
+// Comprehensive Seed Dataset for Search & BachelorHub Ecosystem
 
 const initialProperties = [
   {

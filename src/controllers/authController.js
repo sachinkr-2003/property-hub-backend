@@ -58,7 +58,7 @@ const sendOtp = async (req, res) => {
     if (hasTwilio && process.env.NODE_ENV === 'production') {
       try {
         await twilioClient.messages.create({
-          body: `Your Property Hub verification code is: ${otp}. Valid for 5 minutes.`,
+          body: `Your Search verification code is: ${otp}. Valid for 5 minutes.`,
           from: process.env.TWILIO_PHONE_NUMBER,
           to: `+91${cleanMobile}`
         });
@@ -536,9 +536,9 @@ const sendEmailOtp = async (req, res) => {
     if (hasSmtp) {
       try {
         await transporter.sendMail({
-          from: `"Property Hub" <${process.env.SMTP_EMAIL}>`,
+          from: `"Search" <${process.env.SMTP_EMAIL}>`,
           to: cleanEmail,
-          subject: 'Your Property Hub Login OTP',
+          subject: 'Your Search Login OTP',
           html: `<p>Your verification code is: <strong>${otp}</strong></p><p>Valid for 5 minutes.</p>`,
         });
         console.log(`[AUTH] Sent real Email OTP to ${cleanEmail}`);
