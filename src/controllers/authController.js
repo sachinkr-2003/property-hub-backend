@@ -660,6 +660,8 @@ const verifyEmailOtp = async (req, res) => {
   }
 };
 
+const phoneLogin = verifyOtp;
+
 module.exports = {
   sendOtp,
   verifyOtp,
