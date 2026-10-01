@@ -7,12 +7,20 @@ const Owner = require('../models/Owner');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const Ticket = require('../models/Ticket');
+const Service = require('../models/Service');
+const UsedItem = require('../models/UsedItem');
+const Visit = require('../models/Visit');
+const Roommate = require('../models/Roommate');
 const { 
   initialProperties, 
   initialOwners, 
   initialUsers, 
   initialTransactions, 
-  initialTickets 
+  initialTickets,
+  initialServices,
+  initialUsedItems,
+  initialVisits,
+  initialRoommates
 } = require('./mockSource');
 
 const seedData = async () => {
@@ -28,6 +36,10 @@ const seedData = async () => {
     await User.deleteMany({});
     await Transaction.deleteMany({});
     await Ticket.deleteMany({});
+    await Service.deleteMany({});
+    await UsedItem.deleteMany({});
+    await Visit.deleteMany({});
+    await Roommate.deleteMany({});
     console.log('🧹 Purged existing collections.');
 
     // Insert seeds
@@ -36,6 +48,10 @@ const seedData = async () => {
     const createdUsers = await User.insertMany(initialUsers);
     const createdTxns = await Transaction.insertMany(initialTransactions);
     const createdTickets = await Ticket.insertMany(initialTickets);
+    const createdServices = await Service.insertMany(initialServices);
+    const createdUsedItems = await UsedItem.insertMany(initialUsedItems);
+    const createdVisits = await Visit.insertMany(initialVisits);
+    const createdRoommates = await Roommate.insertMany(initialRoommates);
 
     console.log(`\n🎉 Seed data successfully inserted into MongoDB!`);
     console.log(`   - Properties: ${createdProperties.length}`);
@@ -43,6 +59,10 @@ const seedData = async () => {
     console.log(`   - Users:      ${createdUsers.length}`);
     console.log(`   - Financials: ${createdTxns.length}`);
     console.log(`   - Tickets:    ${createdTickets.length}`);
+    console.log(`   - Services:   ${createdServices.length}`);
+    console.log(`   - Used Items: ${createdUsedItems.length}`);
+    console.log(`   - Visits:     ${createdVisits.length}`);
+    console.log(`   - Roommates:  ${createdRoommates.length}`);
 
     process.exit(0);
   } catch (error) {

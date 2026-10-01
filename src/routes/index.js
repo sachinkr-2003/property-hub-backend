@@ -10,6 +10,9 @@ const serviceRoutes = require('./serviceRoutes');
 const usedItemRoutes = require('./usedItemRoutes');
 const communicationRoutes = require('./communicationRoutes');
 const uploadRoutes = require('./uploadRoutes');
+const visitRoutes = require('./visitRoutes');
+const roommateRoutes = require('./roommateRoutes');
+const reportsRoutes = require('./reportsRoutes');
 
 // Root API Health Check
 router.get('/health', (req, res) => {
@@ -28,6 +31,9 @@ router.get('/health', (req, res) => {
       usedItems: '/api/used-items',
       communication: '/api/communication',
       upload: '/api/upload',
+      visits: '/api/visits',
+      roommates: '/api/roommates',
+      reports: '/api/reports',
     },
   });
 });
@@ -42,5 +48,8 @@ router.use('/services', serviceRoutes);
 router.use('/used-items', usedItemRoutes);
 router.use('/communication', communicationRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/visits', visitRoutes);
+router.use('/roommates', roommateRoutes);
+router.use('/reports', reportsRoutes);
 
 module.exports = router;

@@ -1,64 +1,108 @@
+const mongoose = require('mongoose');
 const Service = require('../models/Service');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
-const mockServices = [
-  {
-    id: "SRV-01",
-    customId: "SRV-01",
-    name: "Annapurna Homestyle Tiffin & Mess",
-    category: "Tiffin / Mess",
-    provider: "Manoj Tiwari",
-    phone: "+91 98399 11001",
-    rating: 4.8,
-    orders: 840,
-    priceStarts: "₹ 75 / meal",
-    status: "Active",
-    complaints: 1,
-    verified: true
-  },
-  {
-    id: "SRV-02",
-    customId: "SRV-02",
-    name: "SpeedyWash Laundry & Dry Cleaners",
-    category: "Laundry",
-    provider: "Suresh Kashyap",
-    phone: "+91 94150 22334",
-    rating: 4.7,
-    orders: 412,
-    priceStarts: "₹ 15 / cloth",
-    status: "Active",
-    complaints: 0,
-    verified: true
-  }
-];
-
-let inMemoryServices = [...mockServices];
-
+// @desc    Get all services / providers
+// @route   GET /api/services
+// @access  Public / Admin
 const getServices = async (req, res) => {
   try {
-    const { category, search } = req.query;
-    let list = inMemoryServices;
+    const { category, search, status } = req.query;
+    const query = {};
+
     if (category && category !== 'All') {
-      list = list.filter(s => s.category.toLowerCase().includes(category.toLowerCase()));
+      query.category = { $regex: category, $options: 'i' };
+    }
+    if (status && status !== 'All') {
+      query.status = status;
     }
     if (search) {
-      list = list.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.provider.toLowerCase().includes(search.toLowerCase()));
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { provider: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+      ];
     }
-    return successResponse(res, 200, 'Services fetched successfully', list);
+
+    const services = await Service.find(query).sort({ createdAt: -1 });
+    return successResponse(res, 200, 'Services fetched successfully from MongoDB', services, {
+      total: services.length,
+    });
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
 };
 
+// @desc    Create new service provider
+// @route   POST /api/services
+// @access  Private (Admin)
+const createService = async (req, res) => {
+  try {
+    const { name, category, provider, phone, priceStarts, status, verified } = req.body;
+    if (!name || !category || !provider || !phone) {
+      return errorResponse(res, 400, 'Please provide name, category, provider, and phone');
+    }
+
+    const count = await Service.countDocuments();
+    const customId = `SRV-${String(count + 1).padStart(2, '0')}`;
+
+    const service = await Service.create({
+      customId,
+      name,
+      category,
+      provider,
+      phone,
+      priceStarts: priceStarts || '₹ 199',
+      status: status || 'Active',
+      verified: verified !== undefined ? verified : true,
+    });
+
+    return successResponse(res, 201, 'Service provider onboarded successfully into MongoDB', service);
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+// @desc    Toggle service provider status (Active / Suspended)
+// @route   PATCH /api/services/:id/status
+// @access  Private (Admin)
 const toggleServiceStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const found = inMemoryServices.find(s => s.id === id || s.customId === id);
-    if (found) {
-      found.status = found.status === 'Active' ? 'Suspended' : 'Active';
-      return successResponse(res, 200, `Service status set to ${found.status}`, { status: found.status });
+    const query = mongoose.isValidObjectId(id)
+      ? { $or: [{ _id: id }, { customId: id }] }
+      : { customId: id };
+
+    const service = await Service.findOne(query);
+    if (!service) {
+      return errorResponse(res, 404, 'Service provider not found');
     }
-    return errorResponse(res, 404, 'Service provider not found');
+
+    service.status = service.status === 'Active' ? 'Suspended' : 'Active';
+    await service.save();
+
+    return successResponse(res, 200, `Service status updated to ${service.status}`, service);
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+// @desc    Delete service provider
+// @route   DELETE /api/services/:id
+// @access  Private (Admin)
+const deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = mongoose.isValidObjectId(id)
+      ? { $or: [{ _id: id }, { customId: id }] }
+      : { customId: id };
+
+    const service = await Service.findOneAndDelete(query);
+    if (!service) {
+      return errorResponse(res, 404, 'Service provider not found');
+    }
+
+    return successResponse(res, 200, `Service provider ${id} removed successfully from MongoDB`);
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
@@ -66,5 +110,7 @@ const toggleServiceStatus = async (req, res) => {
 
 module.exports = {
   getServices,
+  createService,
   toggleServiceStatus,
+  deleteService,
 };

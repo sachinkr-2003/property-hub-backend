@@ -661,10 +661,296 @@ const initialTickets = [
   }
 ];
 
+const initialServices = [
+  {
+    customId: "SRV-01",
+    name: "Annapurna Homestyle Tiffin & Mess",
+    category: "Tiffin / Mess",
+    provider: "Manoj Tiwari",
+    phone: "+91 98399 11001",
+    rating: 4.8,
+    orders: 840,
+    priceStarts: "₹ 75 / meal",
+    status: "Active",
+    complaints: 1,
+    verified: true
+  },
+  {
+    customId: "SRV-02",
+    name: "SpeedyWash Laundry & Dry Cleaners",
+    category: "Laundry",
+    provider: "Suresh Kashyap",
+    phone: "+91 94150 22334",
+    rating: 4.7,
+    orders: 412,
+    priceStarts: "₹ 15 / cloth",
+    status: "Active",
+    complaints: 0,
+    verified: true
+  },
+  {
+    customId: "SRV-03",
+    name: "TrustMaid Verified Domestic Helpers",
+    category: "House Maid",
+    provider: "Sunita Maurya",
+    phone: "+91 98399 22100",
+    rating: 4.8,
+    orders: 342,
+    priceStarts: "₹ 1,499 / mo",
+    status: "Active",
+    complaints: 0,
+    verified: true
+  },
+  {
+    customId: "SRV-04",
+    name: "QuickVolt Electrician & AC Repair",
+    category: "Electrician",
+    provider: "Anil Sharma",
+    phone: "+91 97112 33445",
+    rating: 4.6,
+    orders: 520,
+    priceStarts: "₹ 199",
+    status: "Active",
+    complaints: 1,
+    verified: true
+  },
+  {
+    customId: "SRV-05",
+    name: "Express Fix Plumber & Sanitary",
+    category: "Plumber",
+    provider: "Dinesh Kumar",
+    phone: "+91 87650 11928",
+    rating: 4.6,
+    orders: 219,
+    priceStarts: "₹ 249",
+    status: "Active",
+    complaints: 0,
+    verified: true
+  },
+  {
+    customId: "SRV-06",
+    name: "SafeShift Packers & Movers",
+    category: "Packers & Movers",
+    provider: "Rajesh Logistics",
+    phone: "+91 94150 99881",
+    rating: 4.9,
+    orders: 512,
+    priceStarts: "₹ 2,999",
+    status: "Active",
+    complaints: 3,
+    verified: true
+  }
+];
+
+const initialUsedItems = [
+  {
+    customId: "ITEM-301",
+    title: "Solid Sheesham Wood Queen Bed with Storage",
+    category: "Furniture",
+    price: 11500,
+    originalPrice: 24000,
+    sellerName: "Tanmay Gupta (Tenant)",
+    phone: "+91 98190 77123",
+    locality: "Mahanagar, Lucknow",
+    status: "Active",
+    condition: "Like New (1 yr used)",
+    reported: false,
+    image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    customId: "ITEM-302",
+    title: "LG 260L 3-Star Inverter Frost-Free Refrigerator",
+    category: "Appliances",
+    price: 13500,
+    originalPrice: 28000,
+    sellerName: "Neha Rastogi",
+    phone: "+91 94151 33445",
+    locality: "Gomti Nagar, Lucknow",
+    status: "Active",
+    condition: "Good Condition",
+    reported: false,
+    image: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    customId: "ITEM-303",
+    title: "Ergonomic Mesh Study / Office Chair with Lumbar",
+    category: "Furniture",
+    price: 3200,
+    originalPrice: 8500,
+    sellerName: "Rohit Saxena",
+    phone: "+91 93350 44556",
+    locality: "Vibhuti Khand",
+    status: "Reported",
+    condition: "Broken armrest (Disputed description)",
+    reported: true,
+    image: "https://images.unsplash.com/photo-1580481077195-c3a821a58875?auto=format&fit=crop&w=400&q=80"
+  },
+  {
+    customId: "ITEM-304",
+    title: "Bajaj Majesty 16L Microwave Oven",
+    category: "Appliances",
+    price: 3800,
+    originalPrice: 7500,
+    sellerName: "Aditya Verma",
+    phone: "+91 98890 23119",
+    locality: "Indira Nagar",
+    status: "Active",
+    condition: "Excellent Condition",
+    reported: false,
+    image: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?auto=format&fit=crop&w=400&q=80"
+  }
+];
+
+const initialVisits = [
+  {
+    customId: "VIS-401",
+    propertyId: "PROP-1001",
+    propertyTitle: "Premium 2 BHK Furnished Flat Gomti Nagar",
+    locality: "Gomti Nagar",
+    city: "Lucknow",
+    visitorName: "Aditya Verma",
+    visitorPhone: "+91 98890 23119",
+    visitorEmail: "aditya.verma@tcs.com",
+    ownerName: "Vikramaditya Roy",
+    ownerPhone: "+91 98390 12845",
+    slotDate: "Tomorrow, 11:30 AM",
+    slotTime: "Morning (10:00 AM - 1:00 PM)",
+    leadType: "Direct Bachelor",
+    status: "Confirmed",
+    passCode: "PH-VIS-4921",
+    notes: "Visitor is software engineer at TCS Lucknow looking for immediate possession."
+  },
+  {
+    customId: "VIS-402",
+    propertyId: "PROP-1002",
+    propertyTitle: "Spacious Independent 3 BHK Villa with Garden",
+    locality: "Aliganj",
+    city: "Lucknow",
+    visitorName: "Sunita Mehrotra",
+    visitorPhone: "+91 97920 66554",
+    visitorEmail: "sunita.mehrotra@gmail.com",
+    ownerName: "Ananya Deshmukh",
+    ownerPhone: "+91 94150 88219",
+    slotDate: "Friday, 04:00 PM",
+    slotTime: "Evening (3:00 PM - 6:00 PM)",
+    leadType: "Family / Couple",
+    status: "Completed",
+    passCode: "PH-VIS-8812",
+    notes: "Site visit completed. Tenant requested rental agreement draft."
+  },
+  {
+    customId: "VIS-403",
+    propertyId: "PROP-1004",
+    propertyTitle: "Bachelor PG Sharing Beds with Food & Wi-Fi",
+    locality: "Jankipuram",
+    city: "Lucknow",
+    visitorName: "Rohan Tripathi",
+    visitorPhone: "+91 94155 11200",
+    visitorEmail: "rohan.aktu@gmail.com",
+    ownerName: "Rajesh Kumar Awasthi",
+    ownerPhone: "+91 98380 77112",
+    slotDate: "Saturday, 10:00 AM",
+    slotTime: "Morning (10:00 AM - 1:00 PM)",
+    leadType: "Direct Bachelor",
+    status: "Pending",
+    passCode: "PH-VIS-3320",
+    notes: "Student at Engineering College requesting mess food tasting during visit."
+  },
+  {
+    customId: "VIS-404",
+    propertyId: "PROP-1005",
+    propertyTitle: "Luxury 3 BHK High-Rise Penthouse with Rooftop",
+    locality: "Hazratganj",
+    city: "Lucknow",
+    visitorName: "Deepak Srivastava",
+    visitorPhone: "+91 99190 44332",
+    visitorEmail: "deepak.srivastava@yahoo.com",
+    ownerName: "Harshvardhan Kapoor",
+    ownerPhone: "+91 94500 99881",
+    slotDate: "Sunday, 05:30 PM",
+    slotTime: "Evening (3:00 PM - 6:00 PM)",
+    leadType: "Corporate Tenant",
+    status: "Confirmed",
+    passCode: "PH-VIS-9941",
+    notes: "Executive company lease inquiry."
+  }
+];
+
+const initialRoommates = [
+  {
+    customId: "RM-101",
+    userName: "Amit Kumar",
+    userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80",
+    phone: "+91 98765 11223",
+    email: "amit.kumar@hcl.com",
+    gender: "Male",
+    lookingFor: "Male Flatmate",
+    budget: 6500,
+    targetLocality: "Gomti Nagar",
+    city: "Lucknow",
+    profession: "Software Engineer @ HCL",
+    bio: "Working at HCL Lucknow. Looking for a clean, chill, and friendly flatmate who respects privacy.",
+    tags: ["Non-Smoker", "Veg / Non-Veg", "Night Owl", "Clean Space"],
+    status: "Active"
+  },
+  {
+    customId: "RM-102",
+    userName: "Rahul Singh",
+    userAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=400&q=80",
+    phone: "+91 94155 33445",
+    email: "rahul.ias@gmail.com",
+    gender: "Male",
+    lookingFor: "1 Room in 2BHK / 3BHK Flat",
+    budget: 7500,
+    targetLocality: "Aliganj",
+    city: "Lucknow",
+    profession: "Govt. Job Aspirant (UPSC)",
+    bio: "Preparing for civil services. Need a peaceful, studious environment with disciplined roommates.",
+    tags: ["Pure Veg", "Non-Smoker", "Quiet Environment", "Early Riser"],
+    status: "Active"
+  },
+  {
+    customId: "RM-103",
+    userName: "Priya Sharma",
+    userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80",
+    phone: "+91 99188 66778",
+    email: "priya.designs@gmail.com",
+    gender: "Female",
+    lookingFor: "Female Flatmate",
+    budget: 8000,
+    targetLocality: "Indira Nagar",
+    city: "Lucknow",
+    profession: "UI/UX Product Designer",
+    bio: "Working remotely for a tech company. Friendly, loves indie music, and keeps common spaces neat.",
+    tags: ["Female Only", "Non-Smoker", "Pet Friendly", "Remote Worker"],
+    status: "Active"
+  },
+  {
+    customId: "RM-104",
+    userName: "Vikas Awasthi",
+    userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
+    phone: "+91 98390 55432",
+    email: "vikas.banking@gmail.com",
+    gender: "Male",
+    lookingFor: "Male Flatmate",
+    budget: 5500,
+    targetLocality: "Mahanagar",
+    city: "Lucknow",
+    profession: "Bank Probationary Officer",
+    bio: "Recently transferred to Lucknow SBI branch. Simple and friendly person looking to share rent.",
+    tags: ["Working Pro", "Non-Smoker", "Weekend Traveler"],
+    status: "Active"
+  }
+];
+
 module.exports = {
   initialProperties,
   initialOwners,
   initialUsers,
   initialTransactions,
-  initialTickets
+  initialTickets,
+  initialServices,
+  initialUsedItems,
+  initialVisits,
+  initialRoommates
 };
