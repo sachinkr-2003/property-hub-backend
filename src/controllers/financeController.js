@@ -1,7 +1,15 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
 const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
+
+const hasRazorpay = Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+const razorpay = hasRazorpay ? new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+}) : null;
 
 // @desc    Get all transactions with filters
 // @route   GET /api/finance/transactions
@@ -39,14 +47,56 @@ const getTransactions = async (req, res) => {
   }
 };
 
+// @desc    Create Razorpay Order
+// @route   POST /api/finance/create-order
+// @access  Private
+const createRazorpayOrder = async (req, res) => {
+  try {
+    const { amount, purpose } = req.body;
+    if (!amount) return errorResponse(res, 400, 'Amount is required');
+    
+    if (!hasRazorpay) {
+      // Fallback for local testing without real keys
+      return successResponse(res, 200, 'Mock order created (No API Keys)', {
+        id: `order_mock_${Date.now()}`,
+        amount: Number(amount) * 100,
+        currency: 'INR'
+      });
+    }
+
+    const options = {
+      amount: Number(amount) * 100, // amount in smallest currency unit (paise)
+      currency: "INR",
+      receipt: `rcpt_${Date.now()}`,
+      notes: { purpose }
+    };
+    
+    const order = await razorpay.orders.create(options);
+    return successResponse(res, 200, 'Order created', order);
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
 // @desc    Record new transaction (Razorpay / Manual)
 // @route   POST /api/finance/transactions
 // @access  Private (Admin / Webhook)
 const createTransaction = async (req, res) => {
   try {
-    const { userName, userRole, purpose, amount, gateway, paymentId, status } = req.body;
+    const { userName, userRole, purpose, amount, gateway, paymentId, orderId, signature, status } = req.body;
     if (!userName || !purpose || !amount) {
       return errorResponse(res, 400, 'Please provide userName, purpose, and amount');
+    }
+
+    // Verify signature if provided (Real Razorpay Flow)
+    if (hasRazorpay && paymentId && orderId && signature) {
+      const generatedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(orderId + "|" + paymentId)
+        .digest('hex');
+      
+      if (generatedSignature !== signature) {
+        return errorResponse(res, 400, 'Payment verification failed: Invalid Signature');
+      }
     }
 
     const count = await Transaction.countDocuments();
@@ -163,6 +213,7 @@ const getFinanceSummary = async (req, res) => {
 
 module.exports = {
   getTransactions,
+  createRazorpayOrder,
   createTransaction,
   processRefund,
   getFinanceSummary,

@@ -1,9 +1,6 @@
 const mongoose = require('mongoose');
 const Owner = require('../models/Owner');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
-const { initialOwners } = require('../seed/mockSource');
-
-let inMemoryOwners = [...initialOwners];
 
 const getQueryId = (id) => {
   return mongoose.Types.ObjectId.isValid(id)
@@ -17,24 +14,17 @@ const getQueryId = (id) => {
 const getOwners = async (req, res) => {
   try {
     const { status, kycStatus, search } = req.query;
-    let list;
-    try {
-      let query = {};
-      if (status) query.status = status;
-      if (kycStatus) query.kycStatus = kycStatus;
-      if (search) {
-        query.$or = [
-          { name: new RegExp(search, 'i') },
-          { mobile: new RegExp(search, 'i') },
-          { email: new RegExp(search, 'i') },
-        ];
-      }
-      list = await Owner.find(query).sort({ createdAt: -1 });
-    } catch (e) {
-      list = inMemoryOwners;
+    let query = {};
+    if (status) query.status = status;
+    if (kycStatus) query.kycStatus = kycStatus;
+    if (search) {
+      query.$or = [
+        { name: new RegExp(search, 'i') },
+        { mobile: new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') },
+      ];
     }
-
-    if (!list || list.length === 0) list = inMemoryOwners;
+    const list = await Owner.find(query).sort({ createdAt: -1 });
 
     return successResponse(res, 200, 'Owners list fetched successfully', list, {
       total: list.length,
@@ -52,19 +42,13 @@ const approveKyc = async (req, res) => {
     const { id } = req.params;
     const { remarks } = req.body;
 
-    try {
-      await Owner.findOneAndUpdate(
-        getQueryId(id),
-        { kycStatus: 'Verified', verificationStatus: 'Approved', remarks: remarks || 'Verified' },
-        { new: true }
-      );
-    } catch (e) {
-      const found = inMemoryOwners.find(o => o.id === id || o.customId === id);
-      if (found) {
-        found.kycStatus = 'Verified';
-        found.verificationStatus = 'Approved';
-        found.remarks = remarks;
-      }
+    const updated = await Owner.findOneAndUpdate(
+      getQueryId(id),
+      { kycStatus: 'Verified', verificationStatus: 'Approved', remarks: remarks || 'Verified' },
+      { new: true }
+    );
+    if (!updated) {
+      return errorResponse(res, 404, 'Owner not found');
     }
 
     return successResponse(res, 200, `Owner KYC for ${id} approved and Verified Trust Badge granted!`);
@@ -81,19 +65,13 @@ const rejectKyc = async (req, res) => {
     const { id } = req.params;
     const { remarks } = req.body;
 
-    try {
-      await Owner.findOneAndUpdate(
-        getQueryId(id),
-        { kycStatus: 'Rejected', verificationStatus: 'Rejected', remarks: remarks || 'Rejected' },
-        { new: true }
-      );
-    } catch (e) {
-      const found = inMemoryOwners.find(o => o.id === id || o.customId === id);
-      if (found) {
-        found.kycStatus = 'Rejected';
-        found.verificationStatus = 'Rejected';
-        found.remarks = remarks;
-      }
+    const updated = await Owner.findOneAndUpdate(
+      getQueryId(id),
+      { kycStatus: 'Rejected', verificationStatus: 'Rejected', remarks: remarks || 'Rejected' },
+      { new: true }
+    );
+    if (!updated) {
+      return errorResponse(res, 404, 'Owner not found');
     }
 
     return successResponse(res, 200, `Owner KYC application for ${id} rejected.`);
@@ -110,20 +88,14 @@ const toggleBlockOwner = async (req, res) => {
     const { id } = req.params;
     let nextStatus = 'Blocked';
 
-    try {
-      const owner = await Owner.findOne(getQueryId(id));
-      if (owner) {
-        nextStatus = owner.status === 'Active' ? 'Blocked' : 'Active';
-        owner.status = nextStatus;
-        await owner.save();
-      }
-    } catch (e) {
-      const found = inMemoryOwners.find(o => o.id === id || o.customId === id);
-      if (found) {
-        nextStatus = found.status === 'Active' ? 'Blocked' : 'Active';
-        found.status = nextStatus;
-      }
+    const owner = await Owner.findOne(getQueryId(id));
+    if (!owner) {
+      return errorResponse(res, 404, 'Owner not found');
     }
+    
+    nextStatus = owner.status === 'Active' ? 'Blocked' : 'Active';
+    owner.status = nextStatus;
+    await owner.save();
 
     return successResponse(res, 200, `Owner status updated to ${nextStatus}`, { status: nextStatus });
   } catch (error) {

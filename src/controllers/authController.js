@@ -2,6 +2,26 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
+const twilio = require('twilio');
+const { OAuth2Client } = require('google-auth-library');
+const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
+
+// Initialize Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_EMAIL || 'dummy@gmail.com',
+    pass: process.env.SMTP_PASSWORD || 'dummy_password',
+  },
+});
+
+// Initialize Google OAuth Client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Initialize Twilio client if keys are present
+const hasTwilio = Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+const twilioClient = hasTwilio ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN) : null;
 
 // In-memory OTP store (in production: use Redis)
 const otpStore = new Map(); // mobile → { otp, expiresAt, attempts }
@@ -35,9 +55,22 @@ const sendOtp = async (req, res) => {
 
     otpStore.set(cleanMobile, { otp, expiresAt, attempts: 0 });
 
-    // In production: integrate SMS provider (Twilio, MSG91, Fast2SMS, etc.)
-    // For now we log it for dev use and always accept FIXED_DEV_OTP = '1234'
-    console.log(`[AUTH] OTP for +91${cleanMobile}: ${otp}`);
+    if (hasTwilio && process.env.NODE_ENV === 'production') {
+      try {
+        await twilioClient.messages.create({
+          body: `Your Property Hub verification code is: ${otp}. Valid for 5 minutes.`,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: `+91${cleanMobile}`
+        });
+        console.log(`[AUTH] Sent real SMS to +91${cleanMobile}`);
+      } catch (smsError) {
+        console.error('[AUTH] Twilio SMS failed:', smsError.message);
+        // Fallback for non-blocking dev/testing if SMS fails
+      }
+    } else {
+      // In production without keys, or in dev mode: just log it
+      console.log(`[AUTH-DEV] OTP for +91${cleanMobile}: ${otp}`);
+    }
 
     return successResponse(res, 200, `OTP sent to +91${cleanMobile}`, {
       mobile: cleanMobile,
@@ -281,8 +314,351 @@ const adminLogin = async (req, res) => {
   }
 };
 
-// Legacy alias kept for backwards compatibility
-const phoneLogin = verifyOtp;
+// ────────────────────────────────────────────────────────────────────────────
+// @desc    Google Login
+// @route   POST /api/auth/google-login
+// @access  Public
+// ────────────────────────────────────────────────────────────────────────────
+const googleLogin = async (req, res) => {
+  try {
+    const { idToken, role } = req.body;
+
+    if (!idToken) {
+      return errorResponse(res, 400, 'Google ID Token is required for full verification');
+    }
+
+    let payload;
+    try {
+      // Verify the token with Google Servers
+      const ticket = await googleClient.verifyIdToken({
+        idToken: idToken,
+        audience: process.env.GOOGLE_CLIENT_ID, 
+        // Note: If GOOGLE_CLIENT_ID is missing, verification might fail or skip audience check.
+        // It's highly recommended to have the Client ID in .env
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      console.error('[AUTH] Google Token Verification Failed:', verifyError.message);
+      return errorResponse(res, 401, 'Invalid Google Token. Full verification failed.');
+    }
+
+    const { email, name, picture } = payload;
+
+    if (!email) {
+      return errorResponse(res, 400, 'Google account must have an email attached');
+    }
+
+    let user = await User.findOne({ email });
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      const userRole = role || 'Tenant';
+      const newId = `USR-${Date.now()}`;
+      
+      user = await User.create({
+        customId: newId,
+        name: name || email.split('@')[0],
+        email: email,
+        mobile: `G-${Date.now().toString().slice(-10)}`, // temporary fake mobile
+        role: userRole,
+        profileImage: picture || '',
+        status: 'Active',
+      });
+    }
+
+    const jwtPayload = {
+      id: user.customId || user._id?.toString(),
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = generateToken(jwtPayload);
+
+    return successResponse(res, 200, isNewUser ? 'Account created via Google (Verified)' : 'Google Login successful (Verified)', {
+      token,
+      isNewUser,
+      user: {
+        id: user.customId || user._id?.toString(),
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        profileImage: user.profileImage || '',
+        city: user.city || 'Lucknow',
+        locality: user.locality || 'Gomti Nagar',
+        status: user.status,
+      },
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// @desc    Email & Password Register
+// @route   POST /api/auth/register-email
+// @access  Public
+// ────────────────────────────────────────────────────────────────────────────
+const emailRegister = async (req, res) => {
+  try {
+    const { name, email, password, mobile, role } = req.body;
+
+    if (!name || !email || !password || !mobile) {
+      return errorResponse(res, 400, 'Please provide all required fields (name, email, password, mobile)');
+    }
+
+    const userExists = await User.findOne({ $or: [{ email }, { mobile }] });
+    if (userExists) {
+      return errorResponse(res, 400, 'User with this email or mobile already exists');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const userRole = role || 'Tenant';
+    const newId = `USR-${Date.now()}`;
+
+    const user = await User.create({
+      customId: newId,
+      name: name,
+      email: email,
+      mobile: mobile,
+      password: hashedPassword,
+      role: userRole,
+      status: 'Active',
+    });
+
+    const jwtPayload = {
+      id: user.customId || user._id?.toString(),
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = generateToken(jwtPayload);
+
+    return successResponse(res, 201, 'Account created successfully', {
+      token,
+      isNewUser: true,
+      user: {
+        id: user.customId || user._id?.toString(),
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        profileImage: user.profileImage || '',
+        city: user.city,
+        locality: user.locality,
+        status: user.status,
+      },
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// @desc    Email & Password Login
+// @route   POST /api/auth/login-email
+// @access  Public
+// ────────────────────────────────────────────────────────────────────────────
+const emailLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return errorResponse(res, 400, 'Please provide email and password');
+    }
+
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return errorResponse(res, 401, 'Invalid credentials');
+    }
+
+    if (!user.password) {
+      return errorResponse(res, 400, 'Account uses Google/OTP login. Try logging in via those methods or reset password.');
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return errorResponse(res, 401, 'Invalid credentials');
+    }
+
+    const jwtPayload = {
+      id: user.customId || user._id?.toString(),
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = generateToken(jwtPayload);
+
+    return successResponse(res, 200, 'Login successful', {
+      token,
+      isNewUser: false,
+      user: {
+        id: user.customId || user._id?.toString(),
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        profileImage: user.profileImage || '',
+        city: user.city,
+        locality: user.locality,
+        status: user.status,
+      },
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// @desc    Send OTP to Email
+// @route   POST /api/auth/send-email-otp
+// @access  Public
+// ────────────────────────────────────────────────────────────────────────────
+const sendEmailOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return errorResponse(res, 400, 'Please provide a valid email address');
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const otp = makeOtp();
+    const expiresAt = Date.now() + OTP_TTL_MS;
+
+    otpStore.set(cleanEmail, { otp, expiresAt, attempts: 0 });
+
+    const hasSmtp = Boolean(process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD);
+
+    if (hasSmtp) {
+      try {
+        await transporter.sendMail({
+          from: `"Property Hub" <${process.env.SMTP_EMAIL}>`,
+          to: cleanEmail,
+          subject: 'Your Property Hub Login OTP',
+          html: `<p>Your verification code is: <strong>${otp}</strong></p><p>Valid for 5 minutes.</p>`,
+        });
+        console.log(`[AUTH] Sent real Email OTP to ${cleanEmail}`);
+      } catch (emailError) {
+        console.error('[AUTH] Email sending failed:', emailError.message);
+      }
+    } else {
+      console.log(`[AUTH-DEV] Email OTP for ${cleanEmail}: ${otp}`);
+    }
+
+    return successResponse(res, 200, `OTP sent to ${cleanEmail}`, {
+      email: cleanEmail,
+      expiresIn: 300,
+      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otp } : {}),
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// @desc    Verify Email OTP + login or auto-register
+// @route   POST /api/auth/verify-email-otp
+// @access  Public
+// ────────────────────────────────────────────────────────────────────────────
+const verifyEmailOtp = async (req, res) => {
+  try {
+    const { email, otp, name, role } = req.body;
+
+    if (!email || !otp) {
+      return errorResponse(res, 400, 'Email and OTP are required');
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const entry = otpStore.get(cleanEmail);
+
+    const isDevOtp = otp === FIXED_DEV_OTP;
+
+    if (!isDevOtp) {
+      if (!entry) {
+        return errorResponse(res, 400, 'OTP not found or expired. Please request a new one');
+      }
+      if (Date.now() > entry.expiresAt) {
+        otpStore.delete(cleanEmail);
+        return errorResponse(res, 400, 'OTP has expired. Please request a new one');
+      }
+      entry.attempts += 1;
+      if (entry.attempts > 5) {
+        otpStore.delete(cleanEmail);
+        return errorResponse(res, 429, 'Too many failed attempts. Please request a new OTP');
+      }
+      if (entry.otp !== otp) {
+        return errorResponse(res, 400, `Invalid OTP. ${5 - entry.attempts} attempts remaining`);
+      }
+    }
+
+    otpStore.delete(cleanEmail);
+
+    let user;
+    let isNewUser = false;
+
+    try {
+      user = await User.findOne({ email: cleanEmail });
+
+      if (!user) {
+        isNewUser = true;
+        const userName = name?.trim() || cleanEmail.split('@')[0];
+        const userRole = role || 'Tenant';
+        const newId = `USR-${Date.now()}`;
+
+        user = await User.create({
+          customId: newId,
+          name: userName,
+          email: cleanEmail,
+          mobile: `E-${Date.now().toString().slice(-10)}`, // Dummy mobile for schema
+          role: userRole,
+          status: 'Active',
+        });
+      }
+    } catch (dbErr) {
+      console.warn('[AUTH] DB error, using fallback user:', dbErr.message);
+      user = {
+        customId: `USR-${cleanEmail}`,
+        name: name?.trim() || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        role: role || 'Tenant',
+        status: 'Active',
+        city: 'Lucknow',
+        locality: 'Gomti Nagar',
+      };
+      isNewUser = true;
+    }
+
+    const jwtPayload = {
+      id: user.customId || user._id?.toString(),
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = generateToken(jwtPayload);
+
+    return successResponse(res, 200, isNewUser ? 'Account created & logged in' : 'Login successful', {
+      token,
+      isNewUser,
+      user: {
+        id: user.customId || user._id?.toString(),
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        profileImage: user.profileImage || '',
+        city: user.city,
+        locality: user.locality,
+        status: user.status,
+      },
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
 
 module.exports = {
   sendOtp,
@@ -290,5 +666,10 @@ module.exports = {
   getMe,
   updateProfile,
   adminLogin,
+  googleLogin,
+  emailRegister,
+  emailLogin,
+  sendEmailOtp,
+  verifyEmailOtp,
   phoneLogin,
 };

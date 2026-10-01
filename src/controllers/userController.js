@@ -1,9 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
-const { initialUsers } = require('../seed/mockSource');
-
-let inMemoryUsers = [...initialUsers];
 
 const getQueryId = (id) => {
   return mongoose.Types.ObjectId.isValid(id)
@@ -17,24 +14,17 @@ const getQueryId = (id) => {
 const getUsers = async (req, res) => {
   try {
     const { status, role, search } = req.query;
-    let list;
-    try {
-      let query = {};
-      if (status) query.status = status;
-      if (role) query.role = new RegExp(role, 'i');
-      if (search) {
-        query.$or = [
-          { name: new RegExp(search, 'i') },
-          { email: new RegExp(search, 'i') },
-          { mobile: new RegExp(search, 'i') },
-        ];
-      }
-      list = await User.find(query).sort({ createdAt: -1 });
-    } catch (e) {
-      list = inMemoryUsers;
+    let query = {};
+    if (status) query.status = status;
+    if (role) query.role = new RegExp(role, 'i');
+    if (search) {
+      query.$or = [
+        { name: new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') },
+        { mobile: new RegExp(search, 'i') },
+      ];
     }
-
-    if (!list || list.length === 0) list = inMemoryUsers;
+    const list = await User.find(query).sort({ createdAt: -1 });
 
     return successResponse(res, 200, 'Users fetched successfully', list, {
       total: list.length,
@@ -52,20 +42,14 @@ const toggleBlockUser = async (req, res) => {
     const { id } = req.params;
     let nextStatus = 'Suspended';
 
-    try {
-      const user = await User.findOne(getQueryId(id));
-      if (user) {
-        nextStatus = user.status === 'Active' ? 'Suspended' : 'Active';
-        user.status = nextStatus;
-        await user.save();
-      }
-    } catch (e) {
-      const found = inMemoryUsers.find(u => u.id === id || u.customId === id);
-      if (found) {
-        nextStatus = found.status === 'Active' ? 'Suspended' : 'Active';
-        found.status = nextStatus;
-      }
+    const user = await User.findOne(getQueryId(id));
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
     }
+    
+    nextStatus = user.status === 'Active' ? 'Suspended' : 'Active';
+    user.status = nextStatus;
+    await user.save();
 
     return successResponse(res, 200, `User account set to ${nextStatus}`, { status: nextStatus });
   } catch (error) {

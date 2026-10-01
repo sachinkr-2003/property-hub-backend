@@ -1,9 +1,6 @@
 const mongoose = require('mongoose');
 const Property = require('../models/Property');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
-const { initialProperties } = require('../seed/mockSource');
-
-let inMemoryProperties = [...initialProperties];
 
 const getQueryId = (id) => {
   return mongoose.Types.ObjectId.isValid(id)
@@ -18,33 +15,23 @@ const getProperties = async (req, res) => {
   try {
     const { status, type, locality, minPrice, maxPrice, search } = req.query;
 
-    let items;
-    try {
-      let query = {};
-      if (status) query.status = status;
-      if (type) query.type = type;
-      if (locality) query.locality = new RegExp(locality, 'i');
-      if (minPrice || maxPrice) {
-        query.price = {};
-        if (minPrice) query.price.$gte = Number(minPrice);
-        if (maxPrice) query.price.$lte = Number(maxPrice);
-      }
-      if (search) {
-        query.$or = [
-          { title: new RegExp(search, 'i') },
-          { locality: new RegExp(search, 'i') },
-          { ownerName: new RegExp(search, 'i') },
-        ];
-      }
-      items = await Property.find(query).sort({ createdAt: -1 });
-    } catch (e) {
-      // Fallback to in-memory
-      items = inMemoryProperties;
+    let query = {};
+    if (status) query.status = status;
+    if (type) query.type = type;
+    if (locality) query.locality = new RegExp(locality, 'i');
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
     }
-
-    if (!items || items.length === 0) {
-      items = inMemoryProperties;
+    if (search) {
+      query.$or = [
+        { title: new RegExp(search, 'i') },
+        { locality: new RegExp(search, 'i') },
+        { ownerName: new RegExp(search, 'i') },
+      ];
     }
+    const items = await Property.find(query).sort({ createdAt: -1 });
 
     return successResponse(res, 200, 'Properties fetched successfully', items, {
       total: items.length,
@@ -60,16 +47,7 @@ const getProperties = async (req, res) => {
 const getPropertyById = async (req, res) => {
   try {
     const { id } = req.params;
-    let prop;
-    try {
-      prop = await Property.findOne(getQueryId(id));
-    } catch (e) {
-      prop = inMemoryProperties.find(p => p.id === id || p.customId === id);
-    }
-
-    if (!prop) {
-      prop = inMemoryProperties.find(p => p.id === id || p.customId === id);
-    }
+    const prop = await Property.findOne(getQueryId(id));
 
     if (!prop) {
       return errorResponse(res, 404, 'Property listing not found');
@@ -97,12 +75,7 @@ const createProperty = async (req, res) => {
       postedAt: new Date().toISOString().split('T')[0],
     };
 
-    let created = newProp;
-    try {
-      created = await Property.create(newProp);
-    } catch (e) {
-      inMemoryProperties.unshift(newProp);
-    }
+    const created = await Property.create(newProp);
 
     return successResponse(res, 201, 'Property listing created successfully', created);
   } catch (error) {
@@ -122,12 +95,10 @@ const updatePropertyStatus = async (req, res) => {
       return errorResponse(res, 400, 'Invalid property status');
     }
 
-    try {
-      await Property.findOneAndUpdate(getQueryId(id), { status }, { new: true });
-    } catch (e) {
-      // In-memory fallback
-      const found = inMemoryProperties.find(p => p.id === id || p.customId === id);
-      if (found) found.status = status;
+    const updatedProp = await Property.findOneAndUpdate(getQueryId(id), { status }, { new: true });
+    
+    if (!updatedProp) {
+      return errorResponse(res, 404, 'Property listing not found');
     }
 
     return successResponse(res, 200, `Property listing status updated to ${status}`);
@@ -144,20 +115,14 @@ const togglePropertyFeatured = async (req, res) => {
     const { id } = req.params;
     let nextState = true;
 
-    try {
-      const prop = await Property.findOne(getQueryId(id));
-      if (prop) {
-        nextState = !prop.isFeatured;
-        prop.isFeatured = nextState;
-        await prop.save();
-      }
-    } catch (e) {
-      const found = inMemoryProperties.find(p => p.id === id || p.customId === id);
-      if (found) {
-        nextState = !found.isFeatured;
-        found.isFeatured = nextState;
-      }
+    const prop = await Property.findOne(getQueryId(id));
+    if (!prop) {
+      return errorResponse(res, 404, 'Property listing not found');
     }
+    
+    nextState = !prop.isFeatured;
+    prop.isFeatured = nextState;
+    await prop.save();
 
     return successResponse(res, 200, `Property featured status set to ${nextState}`, { isFeatured: nextState });
   } catch (error) {
@@ -171,10 +136,9 @@ const togglePropertyFeatured = async (req, res) => {
 const deleteProperty = async (req, res) => {
   try {
     const { id } = req.params;
-    try {
-      await Property.findOneAndDelete(getQueryId(id));
-    } catch (e) {
-      inMemoryProperties = inMemoryProperties.filter(p => p.id !== id && p.customId !== id);
+    const deleted = await Property.findOneAndDelete(getQueryId(id));
+    if (!deleted) {
+      return errorResponse(res, 404, 'Property listing not found');
     }
     return successResponse(res, 200, 'Property listing permanently deleted');
   } catch (error) {
