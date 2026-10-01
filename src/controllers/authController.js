@@ -289,26 +289,49 @@ const adminLogin = async (req, res) => {
       return errorResponse(res, 400, 'Please provide email and password');
     }
 
-    if (email === 'aarav@propertyhub.in' && password === 'admin123') {
-      const token = generateToken({
-        id: 'ADM-01',
+    let adminUser = await User.findOne({ email }).select('+password');
+    
+    // Auto-seed admin if it doesn't exist and matches default credentials
+    if (!adminUser && email === 'aarav@propertyhub.in' && password === 'admin123') {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      adminUser = await User.create({
+        customId: 'ADM-01',
         name: 'Aarav Singhania',
         email: 'aarav@propertyhub.in',
+        password: hashedPassword,
+        mobile: '9999999999',
         role: 'Super Admin',
-      });
-
-      return successResponse(res, 200, 'Admin login authorized successfully', {
-        token,
-        admin: {
-          id: 'ADM-01',
-          name: 'Aarav Singhania',
-          email: 'aarav@propertyhub.in',
-          role: 'Super Administrator',
-        },
+        status: 'Active',
       });
     }
 
-    return errorResponse(res, 401, 'Invalid administrative credentials');
+    if (!adminUser || adminUser.role !== 'Super Admin') {
+      return errorResponse(res, 401, 'Invalid administrative credentials or insufficient privileges');
+    }
+
+    const isMatch = await bcrypt.compare(password, adminUser.password);
+    if (!isMatch) {
+      return errorResponse(res, 401, 'Invalid administrative credentials');
+    }
+
+    const token = generateToken({
+      id: adminUser.customId || adminUser._id?.toString(),
+      name: adminUser.name,
+      email: adminUser.email,
+      role: adminUser.role,
+    });
+
+    return successResponse(res, 200, 'Admin login authorized successfully', {
+      token,
+      admin: {
+        id: adminUser.customId || adminUser._id?.toString(),
+        name: adminUser.name,
+        email: adminUser.email,
+        role: adminUser.role,
+        profileImage: adminUser.profileImage || '',
+      },
+    });
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
