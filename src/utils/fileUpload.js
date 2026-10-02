@@ -111,13 +111,18 @@ const upload = multer({
 async function processUploadedFile(file, subfolder = 'general') {
   if (!file) return null;
 
-  if (hasCloudinary) {
+  const isValidCloudinary =
+    hasCloudinary &&
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    !process.env.CLOUDINARY_CLOUD_NAME.includes('aapka') &&
+    !process.env.CLOUDINARY_API_KEY.includes('aapki');
+
+  if (isValidCloudinary) {
     try {
       const result = await cloudinary.uploader.upload(file.path, {
         folder: `property_hub/${subfolder}`,
         resource_type: 'auto',
       });
-      // Optionally remove local file after upload
       fs.unlink(file.path, () => {});
       return {
         url: result.secure_url,
@@ -127,11 +132,34 @@ async function processUploadedFile(file, subfolder = 'general') {
         size: file.size,
       };
     } catch (err) {
-      console.warn('⚠️ Cloudinary upload failed, falling back to local file URL:', err.message);
+      console.warn('⚠️ Cloudinary upload failed, falling back to persistent data URI:', err.message);
     }
   }
 
-  // Local storage fallback (Static Express URL)
+  // Persistent storage fallback (Data URI stored directly into MongoDB Atlas)
+  // This guarantees images NEVER 404 or vanish when Render container restarts!
+  try {
+    if (fs.existsSync(file.path)) {
+      const fileBuffer = fs.readFileSync(file.path);
+      const mime = file.mimetype || 'image/jpeg';
+      const base64Str = fileBuffer.toString('base64');
+      const dataUri = `data:${mime};base64,${base64Str}`;
+      
+      const relativePath = path.relative(uploadsRoot, file.path).replace(/\\/g, '/');
+      return {
+        url: dataUri,
+        localPath: file.path,
+        storageType: 'data-uri',
+        originalName: file.originalname,
+        size: file.size,
+        localUrl: `/uploads/${relativePath}`,
+      };
+    }
+  } catch (readErr) {
+    console.warn('⚠️ Error reading uploaded file for data URI:', readErr.message);
+  }
+
+  // Local storage fallback
   const relativePath = path.relative(uploadsRoot, file.path).replace(/\\/g, '/');
   return {
     url: `/uploads/${relativePath}`,

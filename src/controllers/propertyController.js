@@ -73,6 +73,9 @@ const createProperty = async (req, res) => {
       customId,
       status: 'Pending Verification',
       isVerified: false,
+      deedDocUrl: body.deedDocUrl || '',
+      deedDocName: body.deedDocName || 'Registry / Title Deed Document',
+      deedStatus: 'Pending Verification',
       postedAt: new Date().toISOString().split('T')[0],
     };
 
@@ -90,16 +93,36 @@ const createProperty = async (req, res) => {
 const updatePropertyStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, deedStatus, isVerified } = req.body;
 
-    if (!['Active', 'Pending Verification', 'Rejected', 'Suspended'].includes(status)) {
+    if (status && !['Active', 'Pending Verification', 'Rejected', 'Suspended'].includes(status)) {
       return errorResponse(res, 400, 'Invalid property status');
     }
 
-    const isVerified = status === 'Active';
-    const updateData = { status };
-    if (status === 'Active') {
-      updateData.isVerified = true;
+    const updateData = {};
+    if (status) {
+      updateData.status = status;
+      if (status === 'Active') {
+        updateData.isVerified = true;
+        updateData.deedStatus = 'Verified';
+      } else if (status === 'Rejected') {
+        updateData.isVerified = false;
+        updateData.deedStatus = 'Rejected';
+      }
+    }
+
+    if (isVerified !== undefined) {
+      updateData.isVerified = Boolean(isVerified);
+      if (isVerified === true) {
+        updateData.deedStatus = 'Verified';
+      }
+    }
+
+    if (deedStatus) {
+      updateData.deedStatus = deedStatus;
+      if (deedStatus === 'Verified') {
+        updateData.isVerified = true;
+      }
     }
 
     const updatedProp = await Property.findOneAndUpdate(getQueryId(id), updateData, { new: true });
@@ -108,7 +131,7 @@ const updatePropertyStatus = async (req, res) => {
       return errorResponse(res, 404, 'Property listing not found');
     }
 
-    return successResponse(res, 200, `Property listing status updated to ${status}`);
+    return successResponse(res, 200, `Property listing status updated successfully`, updatedProp);
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }

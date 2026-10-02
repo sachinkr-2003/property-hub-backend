@@ -57,6 +57,19 @@ const propertySchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    deedDocUrl: {
+      type: String,
+      default: '',
+    },
+    deedDocName: {
+      type: String,
+      default: 'Registry / Title Deed Document',
+    },
+    deedStatus: {
+      type: String,
+      enum: ['Verified', 'Pending Verification', 'Rejected'],
+      default: 'Pending Verification',
+    },
     isVerified: {
       type: Boolean,
       default: false,

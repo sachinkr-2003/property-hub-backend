@@ -103,9 +103,103 @@ const toggleBlockOwner = async (req, res) => {
   }
 };
 
+// @desc    Submit or update Owner KYC dossier from mobile app
+// @route   POST /api/kyc/submit
+// @access  Public / Owner
+const submitKyc = async (req, res) => {
+  try {
+    const {
+      name,
+      mobile,
+      email,
+      aadhaarNumber,
+      panNumber,
+      aadhaarUrl,
+      panUrl,
+      registryUrl,
+      role,
+    } = req.body;
+
+    if (!mobile) {
+      return errorResponse(res, 400, 'Mobile number is required for KYC registration');
+    }
+
+    const cleanMobile = mobile.trim();
+    let owner = await Owner.findOne({ mobile: cleanMobile });
+
+    if (!owner) {
+      const count = await Owner.countDocuments();
+      const customId = `OWN-${500 + count + 1}`;
+      owner = new Owner({
+        customId,
+        name: name?.trim() || 'Landlord',
+        mobile: cleanMobile,
+        email: email?.trim() || `${cleanMobile.replace(/[^0-9]/g, '')}@propertyhub.in`,
+        role: role || 'Direct Owner',
+      });
+    } else {
+      if (name) owner.name = name.trim();
+      if (email) owner.email = email.trim();
+      if (role) owner.role = role;
+    }
+
+    owner.kycStatus = 'Pending';
+    owner.verificationStatus = 'Pending';
+    owner.remarks = 'KYC documents under review by admin';
+
+    owner.documents = {
+      aadhaar: aadhaarNumber || owner.documents?.aadhaar || '',
+      pan: panNumber || owner.documents?.pan || '',
+      registry: owner.documents?.registry || 'Title Deed Submitted',
+      aadhaarUrl: aadhaarUrl || owner.documents?.aadhaarUrl || '',
+      panUrl: panUrl || owner.documents?.panUrl || '',
+      registryUrl: registryUrl || owner.documents?.registryUrl || '',
+    };
+
+    await owner.save();
+
+    return successResponse(res, 201, 'KYC submitted successfully. Awaiting admin approval.', owner);
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+// @desc    Get owner's KYC status by mobile number
+// @route   GET /api/kyc/status/:mobile
+// @access  Public / Owner
+const getKycStatus = async (req, res) => {
+  try {
+    const { mobile } = req.params;
+    const cleanMobile = mobile.trim();
+
+    const owner = await Owner.findOne({ mobile: cleanMobile });
+    if (!owner) {
+      return successResponse(res, 200, 'Owner KYC profile not found', {
+        kycStatus: 'Unverified',
+        verificationStatus: 'Pending',
+        documents: {},
+      });
+    }
+
+    return successResponse(res, 200, 'KYC status retrieved successfully', {
+      id: owner.customId,
+      name: owner.name,
+      mobile: owner.mobile,
+      kycStatus: owner.kycStatus,
+      verificationStatus: owner.verificationStatus,
+      documents: owner.documents,
+      remarks: owner.remarks,
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
 module.exports = {
   getOwners,
   approveKyc,
   rejectKyc,
   toggleBlockOwner,
+  submitKyc,
+  getKycStatus,
 };
