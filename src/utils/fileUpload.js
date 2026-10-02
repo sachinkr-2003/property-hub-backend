@@ -79,7 +79,15 @@ const fileFilter = (req, file, cb) => {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   ];
 
-  if (allowedMimes.includes(file.mimetype)) {
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.pdf', '.doc', '.docx'];
+
+  if (
+    allowedMimes.includes(file.mimetype) ||
+    file.mimetype.startsWith('image/') ||
+    (file.mimetype === 'application/octet-stream' && allowedExts.includes(ext)) ||
+    allowedExts.includes(ext)
+  ) {
     cb(null, true);
   } else {
     cb(new Error(`Invalid file type ${file.mimetype}. Allowed: JPG, PNG, WEBP, PDF, DOC.`), false);

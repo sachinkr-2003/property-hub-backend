@@ -95,7 +95,13 @@ const updatePropertyStatus = async (req, res) => {
       return errorResponse(res, 400, 'Invalid property status');
     }
 
-    const updatedProp = await Property.findOneAndUpdate(getQueryId(id), { status }, { new: true });
+    const isVerified = status === 'Active';
+    const updateData = { status };
+    if (status === 'Active') {
+      updateData.isVerified = true;
+    }
+
+    const updatedProp = await Property.findOneAndUpdate(getQueryId(id), updateData, { new: true });
     
     if (!updatedProp) {
       return errorResponse(res, 404, 'Property listing not found');
