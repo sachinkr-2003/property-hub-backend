@@ -71,7 +71,8 @@ const createProperty = async (req, res) => {
       ...body,
       id: customId,
       customId,
-      status: body.status || 'Pending Verification',
+      status: 'Pending Verification',
+      isVerified: false,
       postedAt: new Date().toISOString().split('T')[0],
     };
 
