@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
     },
     profileImage: {
       type: String,
-      default: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80',
+      default: '',
     },
     city: {
       type: String,

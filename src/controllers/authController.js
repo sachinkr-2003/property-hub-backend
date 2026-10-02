@@ -157,7 +157,7 @@ const verifyOtp = async (req, res) => {
         status: 'Active',
         city: 'Lucknow',
         locality: 'Gomti Nagar',
-        profileImage: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+        profileImage: '',
       };
       isNewUser = true;
     }
