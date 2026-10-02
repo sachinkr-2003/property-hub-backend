@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const UsedItem = require('../models/UsedItem');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
+const { initialUsedItems } = require('../seed/mockSource');
+
 // @desc    Get all used items
 // @route   GET /api/used-items
 // @access  Public / Admin
@@ -9,6 +11,15 @@ const getUsedItems = async (req, res) => {
   try {
     const { category, reported, search, status } = req.query;
     const query = {};
+
+    const count = await UsedItem.countDocuments();
+    if (count === 0 && initialUsedItems && initialUsedItems.length > 0) {
+      try {
+        await UsedItem.insertMany(initialUsedItems);
+      } catch (seedErr) {
+        console.warn('[USED ITEMS] Auto-seed error:', seedErr.message);
+      }
+    }
 
     if (category && category !== 'All') {
       query.category = { $regex: category, $options: 'i' };

@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Service = require('../models/Service');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
+const { initialServices } = require('../seed/mockSource');
+
 // @desc    Get all services / providers
 // @route   GET /api/services
 // @access  Public / Admin
@@ -9,6 +11,15 @@ const getServices = async (req, res) => {
   try {
     const { category, search, status } = req.query;
     const query = {};
+
+    const count = await Service.countDocuments();
+    if (count === 0 && initialServices && initialServices.length > 0) {
+      try {
+        await Service.insertMany(initialServices);
+      } catch (seedErr) {
+        console.warn('[SERVICES] Auto-seed error:', seedErr.message);
+      }
+    }
 
     if (category && category !== 'All') {
       query.category = { $regex: category, $options: 'i' };

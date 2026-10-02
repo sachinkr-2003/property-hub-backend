@@ -4,6 +4,7 @@ const {
   getProperties,
   getPropertyById,
   createProperty,
+  updateProperty,
   updatePropertyStatus,
   togglePropertyFeatured,
   deleteProperty,
@@ -15,6 +16,8 @@ router.route('/')
 
 router.route('/:id')
   .get(getPropertyById)
+  .put(updateProperty)
+  .patch(updateProperty)
   .delete(deleteProperty);
 
 router.patch('/:id/status', updatePropertyStatus);

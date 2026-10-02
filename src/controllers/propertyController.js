@@ -95,7 +95,7 @@ const updatePropertyStatus = async (req, res) => {
     const { id } = req.params;
     const { status, deedStatus, isVerified } = req.body;
 
-    if (status && !['Active', 'Pending Verification', 'Rejected', 'Suspended'].includes(status)) {
+    if (status && !['Active', 'Pending Verification', 'Rejected', 'Suspended', 'Paused'].includes(status)) {
       return errorResponse(res, 400, 'Invalid property status');
     }
 
@@ -137,6 +137,30 @@ const updatePropertyStatus = async (req, res) => {
   }
 };
 
+// @desc    Update full property details
+// @route   PUT /api/properties/:id or PATCH /api/properties/:id
+// @access  Public / Private
+const updateProperty = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+
+    const updated = await Property.findOneAndUpdate(
+      getQueryId(id),
+      { $set: body },
+      { new: true, runValidators: false }
+    );
+
+    if (!updated) {
+      return errorResponse(res, 404, 'Property listing not found');
+    }
+
+    return successResponse(res, 200, 'Property updated successfully', updated);
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
 // @desc    Toggle property featured boost
 // @route   PATCH /api/properties/:id/featured
 // @access  Private (Admin)
@@ -170,7 +194,7 @@ const deleteProperty = async (req, res) => {
     if (!deleted) {
       return errorResponse(res, 404, 'Property listing not found');
     }
-    return successResponse(res, 200, 'Property listing permanently deleted');
+    return successResponse(res, 200, 'Property listing permanently deleted', { id });
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
@@ -180,6 +204,7 @@ module.exports = {
   getProperties,
   getPropertyById,
   createProperty,
+  updateProperty,
   updatePropertyStatus,
   togglePropertyFeatured,
   deleteProperty,

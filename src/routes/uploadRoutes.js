@@ -132,12 +132,17 @@ router.post('/single', upload.single('file'), async (req, res, next) => {
 
     const result = await processUploadedFile(req.file, 'general');
 
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const fullUrl = result.url.startsWith('http') || result.url.startsWith('data:')
+      ? result.url
+      : `${baseUrl}${result.url.startsWith('/') ? '' : '/'}${result.url}`;
+
     return successResponse(
       res,
       201,
       'File uploaded successfully.',
       {
-        url: result.url,
+        url: fullUrl,
         details: result,
       }
     );
