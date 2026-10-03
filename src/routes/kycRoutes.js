@@ -9,11 +9,13 @@ const {
   getKycStatus,
 } = require('../controllers/kycController');
 
-router.get('/owners', getOwners);
+const { protect, authorize } = require('../middleware/authMiddleware');
+
+router.get('/owners', protect, authorize('Super Admin', 'Staff'), getOwners);
 router.post('/submit', submitKyc);
 router.get('/status/:mobile', getKycStatus);
-router.patch('/:id/approve', approveKyc);
-router.patch('/:id/reject', rejectKyc);
-router.patch('/:id/toggle-block', toggleBlockOwner);
+router.patch('/:id/approve', protect, authorize('Super Admin', 'Staff'), approveKyc);
+router.patch('/:id/reject', protect, authorize('Super Admin', 'Staff'), rejectKyc);
+router.patch('/:id/toggle-block', protect, authorize('Super Admin', 'Staff'), toggleBlockOwner);
 
 module.exports = router;

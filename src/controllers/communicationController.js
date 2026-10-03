@@ -245,8 +245,13 @@ const markNotificationRead = async (req, res) => {
 // @access  Public / User
 const clearNotifications = async (req, res) => {
   try {
-    await Notification.deleteMany({});
-    return successResponse(res, 200, 'All notifications cleared successfully');
+    const { userId } = req.query;
+    if (userId && userId !== 'all') {
+      await Notification.deleteMany({ userId });
+      return successResponse(res, 200, `Notifications for user ${userId} cleared successfully`);
+    }
+    await Notification.deleteMany({ type: { $ne: 'broadcast' } });
+    return successResponse(res, 200, 'Personal notifications cleared successfully');
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }

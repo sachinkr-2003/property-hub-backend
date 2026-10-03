@@ -8,6 +8,10 @@ const {
   deleteUser,
 } = require('../controllers/userController');
 
+const { protect, authorize } = require('../middleware/authMiddleware');
+
+router.use(protect, authorize('Super Admin', 'Staff'));
+
 router.get('/', getUsers);
 router.get('/:id', getUserById);
 router.patch('/:id/toggle-block', toggleBlockUser);

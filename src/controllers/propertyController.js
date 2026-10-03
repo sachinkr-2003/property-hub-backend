@@ -84,11 +84,11 @@ const createProperty = async (req, res) => {
       city: body.city || 'Lucknow',
       ownerName: body.ownerName || 'Property Owner',
       ownerPhone: body.ownerPhone || '+91 91353 21898',
-      status: 'Pending Verification',
-      isVerified: false,
+      status: body.status === 'Active' ? 'Active' : 'Pending Verification',
+      isVerified: body.isVerified !== undefined ? Boolean(body.isVerified) : (body.status === 'Active'),
       deedDocUrl: body.deedDocUrl || '',
       deedDocName: body.deedDocName || 'Registry / Title Deed Document',
-      deedStatus: 'Pending Verification',
+      deedStatus: body.status === 'Active' ? 'Verified' : (body.deedStatus || 'Pending Verification'),
       postedAt: new Date().toISOString().split('T')[0],
     };
 

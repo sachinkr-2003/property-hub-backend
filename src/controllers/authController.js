@@ -329,14 +329,13 @@ const adminLogin = async (req, res) => {
       (cleanInput === 'admin@propertyhub.in' || cleanInput === 'aarav@propertyhub.in' || cleanInput === 'admin') &&
       password === 'admin123'
     );
+    const queryConditions = [{ email: cleanInput }];
+    if (isMasterDefault) {
+      queryConditions.push({ email: 'admin@propertyhub.in' }, { email: 'aarav@propertyhub.in' });
+    }
 
     let adminUser = await User.findOne({
-      $or: [
-        { email: cleanInput },
-        { email: 'admin@propertyhub.in' },
-        { email: 'aarav@propertyhub.in' },
-        { role: 'Super Admin' },
-      ],
+      $or: queryConditions,
     }).select('+password');
 
     // Auto-seed admin if it doesn't exist and matches default credentials

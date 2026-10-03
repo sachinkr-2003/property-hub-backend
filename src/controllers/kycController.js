@@ -34,6 +34,9 @@ const getOwners = async (req, res) => {
   }
 };
 
+const Property = require('../models/Property');
+const Notification = require('../models/Notification');
+
 // @desc    Approve Owner KYC Dossier
 // @route   PATCH /api/kyc/:id/approve
 // @access  Private (Admin)
@@ -51,7 +54,20 @@ const approveKyc = async (req, res) => {
       return errorResponse(res, 404, 'Owner not found');
     }
 
-    return successResponse(res, 200, `Owner KYC for ${id} approved and Verified Trust Badge granted!`);
+    try {
+      await Notification.create({
+        customId: `NTF-${Date.now().toString().slice(-6)}`,
+        userId: updated.mobile,
+        targetAudience: 'All Users',
+        type: 'kyc',
+        title: 'KYC Verified Successfully!',
+        message: 'Congratulations! Your Landlord KYC has been verified. Verified Trust Badge is now active on your listings.',
+        deepLink: 'app://owner/kyc',
+        isRead: false,
+      });
+    } catch (_) {}
+
+    return successResponse(res, 200, `Owner KYC for ${id} approved and Verified Trust Badge granted!`, updated);
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
@@ -74,7 +90,20 @@ const rejectKyc = async (req, res) => {
       return errorResponse(res, 404, 'Owner not found');
     }
 
-    return successResponse(res, 200, `Owner KYC application for ${id} rejected.`);
+    try {
+      await Notification.create({
+        customId: `NTF-${Date.now().toString().slice(-6)}`,
+        userId: updated.mobile,
+        targetAudience: 'All Users',
+        type: 'kyc',
+        title: 'KYC Verification Needs Attention',
+        message: remarks || 'Your KYC documents were rejected. Please re-upload clear government proof.',
+        deepLink: 'app://owner/kyc',
+        isRead: false,
+      });
+    } catch (_) {}
+
+    return successResponse(res, 200, `Owner KYC application for ${id} rejected.`, updated);
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
@@ -97,7 +126,15 @@ const toggleBlockOwner = async (req, res) => {
     owner.status = nextStatus;
     await owner.save();
 
-    return successResponse(res, 200, `Owner status updated to ${nextStatus}`, { status: nextStatus });
+    // Auto-sync property listings: suspend listings if owner blocked, restore when active
+    try {
+      await Property.updateMany(
+        { ownerPhone: owner.mobile },
+        { status: nextStatus === 'Blocked' ? 'Suspended' : 'Active' }
+      );
+    } catch (_) {}
+
+    return successResponse(res, 200, `Owner status updated to ${nextStatus}`, { status: nextStatus, owner });
   } catch (error) {
     return errorResponse(res, 500, error.message);
   }
@@ -117,6 +154,7 @@ const submitKyc = async (req, res) => {
       aadhaarUrl,
       panUrl,
       registryUrl,
+      selfieUrl,
       role,
     } = req.body;
 
@@ -129,7 +167,8 @@ const submitKyc = async (req, res) => {
 
     if (!owner) {
       const count = await Owner.countDocuments();
-      const customId = `OWN-${500 + count + 1}`;
+      const uniqueSuffix = Date.now().toString().slice(-4);
+      const customId = `OWN-${500 + count + 1}-${uniqueSuffix}`;
       owner = new Owner({
         customId,
         name: name?.trim() || 'Landlord',
@@ -150,10 +189,11 @@ const submitKyc = async (req, res) => {
     owner.documents = {
       aadhaar: aadhaarNumber || owner.documents?.aadhaar || '',
       pan: panNumber || owner.documents?.pan || '',
-      registry: owner.documents?.registry || 'Title Deed Submitted',
+      registry: registryUrl ? 'Title Deed Submitted' : (owner.documents?.registry || ''),
       aadhaarUrl: aadhaarUrl || owner.documents?.aadhaarUrl || '',
       panUrl: panUrl || owner.documents?.panUrl || '',
       registryUrl: registryUrl || owner.documents?.registryUrl || '',
+      selfieUrl: selfieUrl || owner.documents?.selfieUrl || '',
     };
 
     await owner.save();

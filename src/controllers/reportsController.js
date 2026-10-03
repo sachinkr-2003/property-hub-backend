@@ -36,7 +36,7 @@ const getAnalytics = async (req, res) => {
 
     // Live property type breakdown from MongoDB
     const propertyTypeCounts = await Property.aggregate([
-      { $group: { _id: '$type', count: { $sum: 1 }, avgRent: { $avg: '$rent' } } },
+      { $group: { _id: '$type', count: { $sum: 1 }, avgRent: { $avg: '$price' } } },
     ]).catch(() => []);
 
     const propertyVelocity = [

@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['Tenant', 'Bachelor', 'Roommate', 'Family', 'Super Admin', 'Staff'],
+      enum: ['Tenant', 'Bachelor', 'Roommate', 'Family', 'Owner', 'Landlord', 'Super Admin', 'Staff'],
       default: 'Tenant',
     },
     profileImage: {

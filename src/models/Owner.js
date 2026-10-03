@@ -43,6 +43,7 @@ const ownerSchema = new mongoose.Schema(
       aadhaarUrl: { type: String, default: '' },
       panUrl: { type: String, default: '' },
       registryUrl: { type: String, default: '' },
+      selfieUrl: { type: String, default: '' },
     },
     propertiesCount: {
       type: Number,

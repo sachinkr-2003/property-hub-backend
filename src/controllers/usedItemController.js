@@ -52,6 +52,18 @@ const getUsedItems = async (req, res) => {
 // @access  Public / Tenant
 const createUsedItem = async (req, res) => {
   try {
+    const {
+      title,
+      category,
+      price,
+      originalPrice,
+      sellerName,
+      phone,
+      locality,
+      condition,
+      image,
+    } = req.body;
+
     const sName = sellerName || req.body.ownerName || req.body.userName || 'Verified Seller';
     const sPhone = phone || req.body.sellerPhone || req.body.ownerPhone || req.body.userPhone || '+91 98765 43210';
     const numPrice = Number(String(price || '1000').replace(/[^0-9.]/g, '')) || 1000;
@@ -60,8 +72,8 @@ const createUsedItem = async (req, res) => {
       return errorResponse(res, 400, 'Please provide item title');
     }
 
-    const count = await UsedItem.countDocuments();
-    const customId = `ITEM-${String(count + 301)}`;
+    const uniqueSuffix = Date.now().toString().slice(-5);
+    const customId = req.body.customId || `ITEM-${uniqueSuffix}`;
 
     const newItem = await UsedItem.create({
       customId,
