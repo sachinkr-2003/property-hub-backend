@@ -65,12 +65,25 @@ const getPropertyById = async (req, res) => {
 const createProperty = async (req, res) => {
   try {
     const body = req.body;
-    const customId = `PROP-${Math.floor(1000 + Math.random() * 9000)}`;
+    const count = await Property.countDocuments();
+    const uniqueSuffix = Date.now().toString().slice(-4);
+    const customId = body.customId && body.customId.startsWith('PROP-') 
+      ? body.customId 
+      : `PROP-${1000 + count + 1}-${uniqueSuffix}`;
 
     const newProp = {
       ...body,
       id: customId,
       customId,
+      title: body.title || 'Verified Property Listing',
+      type: body.type || 'Flat',
+      listingType: body.listingType || 'Rent',
+      price: Number(body.price) || 15000,
+      address: body.address || body.locality || 'Lucknow, UP',
+      locality: body.locality || 'Gomti Nagar',
+      city: body.city || 'Lucknow',
+      ownerName: body.ownerName || 'Property Owner',
+      ownerPhone: body.ownerPhone || '+91 91353 21898',
       status: 'Pending Verification',
       isVerified: false,
       deedDocUrl: body.deedDocUrl || '',

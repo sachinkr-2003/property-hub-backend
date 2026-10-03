@@ -59,8 +59,11 @@ const createRoommate = async (req, res) => {
       tags,
     } = req.body;
 
-    if (!userName || !phone || !budget || !targetLocality) {
-      return errorResponse(res, 400, 'Please provide userName, phone, budget, and targetLocality');
+    const loc = targetLocality || req.body.locality || req.body.preferredLocation || 'Lucknow';
+    const numBudget = budget ? Number(String(budget).replace(/[^0-9.]/g, '')) : 6000;
+
+    if (!userName || !phone) {
+      return errorResponse(res, 400, 'Please provide userName and phone number');
     }
 
     const count = await Roommate.countDocuments();
@@ -74,11 +77,11 @@ const createRoommate = async (req, res) => {
       email: email || '',
       gender: gender || 'Male',
       lookingFor: lookingFor || 'Male Flatmate',
-      budget: Number(budget),
-      targetLocality,
+      budget: numBudget || 6000,
+      targetLocality: loc,
       city: city || 'Lucknow',
       profession: profession || 'Working Professional',
-      bio: bio || '',
+      bio: bio || 'Looking for a compatible flatmate/room in Lucknow.',
       tags: Array.isArray(tags) ? tags : ['Non-Smoker', 'Quiet Space'],
       status: 'Active',
     });

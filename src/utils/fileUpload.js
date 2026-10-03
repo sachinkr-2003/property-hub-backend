@@ -136,37 +136,16 @@ async function processUploadedFile(file, subfolder = 'general') {
     }
   }
 
-  // Persistent storage fallback (Data URI stored directly into MongoDB Atlas)
-  // This guarantees images NEVER 404 or vanish when Render container restarts!
-  try {
-    if (fs.existsSync(file.path)) {
-      const fileBuffer = fs.readFileSync(file.path);
-      const mime = file.mimetype || 'image/jpeg';
-      const base64Str = fileBuffer.toString('base64');
-      const dataUri = `data:${mime};base64,${base64Str}`;
-      
-      const relativePath = path.relative(uploadsRoot, file.path).replace(/\\/g, '/');
-      return {
-        url: dataUri,
-        localPath: file.path,
-        storageType: 'data-uri',
-        originalName: file.originalname,
-        size: file.size,
-        localUrl: `/uploads/${relativePath}`,
-      };
-    }
-  } catch (readErr) {
-    console.warn('⚠️ Error reading uploaded file for data URI:', readErr.message);
-  }
-
-  // Local storage fallback
+  // Local static file storage (Clean, fast, under 50 bytes URL in MongoDB)
   const relativePath = path.relative(uploadsRoot, file.path).replace(/\\/g, '/');
+  const staticUrl = `/uploads/${relativePath}`;
   return {
-    url: `/uploads/${relativePath}`,
+    url: staticUrl,
     localPath: file.path,
     storageType: 'local',
     originalName: file.originalname,
     size: file.size,
+    localUrl: staticUrl,
   };
 }
 

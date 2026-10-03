@@ -58,9 +58,10 @@ const createVisit = async (req, res) => {
       notes,
     } = req.body;
 
-    if (!propertyTitle || !visitorName || !visitorPhone || !slotDate) {
-      return errorResponse(res, 400, 'Please provide propertyTitle, visitorName, visitorPhone, and slotDate');
-    }
+    const vName = visitorName || req.body.userName || req.body.ownerName || 'Property Seeker';
+    const vPhone = visitorPhone || req.body.userPhone || req.body.ownerPhone || '+91 91353 21898';
+    const sDate = slotDate || req.body.visitDate || 'Tomorrow';
+    const pTitle = propertyTitle || 'Verified Property Visit';
 
     const count = await Visit.countDocuments();
     const customId = `VIS-${String(count + 401)}`;
@@ -69,15 +70,15 @@ const createVisit = async (req, res) => {
     const newVisit = await Visit.create({
       customId,
       propertyId: propertyId || '',
-      propertyTitle,
+      propertyTitle: pTitle,
       locality: locality || 'Lucknow',
       city: city || 'Lucknow',
-      visitorName,
-      visitorPhone,
+      visitorName: vName,
+      visitorPhone: vPhone,
       visitorEmail: visitorEmail || '',
       ownerName: ownerName || 'Direct Property Landlord',
       ownerPhone: ownerPhone || '',
-      slotDate,
+      slotDate: sDate,
       slotTime: slotTime || 'Morning (10:00 AM - 1:00 PM)',
       leadType: leadType || 'Direct Bachelor',
       status: 'Confirmed',
