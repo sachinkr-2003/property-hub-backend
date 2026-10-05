@@ -5,6 +5,7 @@ dotenv.config();
 
 const app = require('./app');
 const connectDB = require('./config/db');
+const { initChatSocket } = require('./socket/chatSocket');
 
 const PORT = process.env.PORT || 5000;
 
@@ -20,6 +21,9 @@ const server = app.listen(PORT, () => {
   console.log(`🌐 Mode: ${process.env.NODE_ENV || 'development'}`);
   console.log('====================================================');
 });
+
+// Initialize Real-time Socket.io Chat
+initChatSocket(server);
 
 // Automatic recovery if port is temporarily occupied
 server.on('error', (err) => {

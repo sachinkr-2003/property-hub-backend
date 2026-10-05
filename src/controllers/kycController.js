@@ -163,7 +163,13 @@ const submitKyc = async (req, res) => {
     }
 
     const cleanMobile = mobile.trim();
-    let owner = await Owner.findOne({ mobile: cleanMobile });
+    const digitsOnly = cleanMobile.replace(/\D/g, '').slice(-10);
+    let owner = await Owner.findOne({
+      $or: [
+        { mobile: cleanMobile },
+        { mobile: new RegExp(digitsOnly + '$') },
+      ]
+    });
 
     if (!owner) {
       const count = await Owner.countDocuments();
@@ -211,8 +217,14 @@ const getKycStatus = async (req, res) => {
   try {
     const { mobile } = req.params;
     const cleanMobile = mobile.trim();
+    const digitsOnly = cleanMobile.replace(/\D/g, '').slice(-10);
 
-    const owner = await Owner.findOne({ mobile: cleanMobile });
+    const owner = await Owner.findOne({
+      $or: [
+        { mobile: cleanMobile },
+        { mobile: new RegExp(digitsOnly + '$') },
+      ]
+    });
     if (!owner) {
       return successResponse(res, 200, 'Owner KYC profile not found', {
         kycStatus: 'Unverified',

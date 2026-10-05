@@ -20,7 +20,7 @@ router.route('/:id')
   .get(getPropertyById)
   .put(updateProperty)
   .patch(updateProperty)
-  .delete(protect, authorize('Super Admin', 'Staff'), deleteProperty);
+  .delete(deleteProperty);
 
 router.patch('/:id/status', protect, authorize('Super Admin', 'Staff'), updatePropertyStatus);
 router.patch('/:id/featured', protect, authorize('Super Admin', 'Staff'), togglePropertyFeatured);
